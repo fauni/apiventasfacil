@@ -133,6 +133,9 @@ namespace BusinessLogic.Repositories
             return result;
         }
 
+        /*
+        Este metodo obtiene las cotizaciones de venta desde el Service Layer de SAP. Todavia falta revisar los campos que retorna.
+        */
         public async Task<List<SalesQuotationView>> GetSalesQuotationsFromServiceLayerAsync()
         {
             _settings = await _parameterService.GetParametersByGroupAsync("ireilab");

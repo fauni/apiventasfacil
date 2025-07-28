@@ -9,7 +9,16 @@ namespace Core.DTOs.SalesQuotation
     public class SalesQuotationDto
     {
         public string CardCode { get; set; }
-        public string DocDate { get; set; }
+        public string Comments { get; set; }
+        public int SalesPersonCode { get; set; }
+        public string U_usrventafacil { get; set; }
+        public string? U_latitud { get; set; }
+        public string? U_longitud { get; set; }
+        public string U_VF_TiempoEntrega { get; set; }
+        public string U_VF_ValidezOferta { get; set; }
+        public string U_VF_FormaPago { get; set; }
+        public DateTimeOffset U_fecharegistroapp { get; set; }
+        public DateTimeOffset U_horaregistroapp { get; set; }
         public List<SalesQuotationLineDto> DocumentLines { get; set; }
     }
 
@@ -17,7 +26,9 @@ namespace Core.DTOs.SalesQuotation
     {
         public string ItemCode { get; set; }
         public decimal Quantity { get; set; }
-        public decimal Price { get; set; }
-        public string WarehouseCode { get; set; }
+        public decimal PriceAfterVAT { get; set; }
+        public int UoMEntry { get; set; }
+        // public string UoMCode { get; set; }
+
     }
 }
