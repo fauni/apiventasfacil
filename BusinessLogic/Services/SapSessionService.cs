@@ -1,5 +1,5 @@
 ﻿using Core.DTOs;
-using Core.Interfaces;
+using Core.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System;

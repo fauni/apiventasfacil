@@ -1,7 +1,7 @@
 ﻿using BusinessLogic.Data;
 using Core.DTOs;
 using Core.Entities;
-using Core.Interfaces;
+using Core.Interfaces.Services;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;

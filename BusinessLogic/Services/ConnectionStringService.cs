@@ -1,4 +1,4 @@
-﻿using Core.Interfaces;
+﻿using Core.Interfaces.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace BusinessLogic.Services
     {
         public string BuildSqlServerConnectionString(string server, string db, string user, string password)
         {
-            return $"Server={server};Database={db};User Id={user};Password={password};TrustServerCertificate=True;";
+            return $"Server={server};Database={db};User Id={user};Password={password};TrustServerCertificate=True;MultipleActiveResultSets=True;";
         }
     }
 }

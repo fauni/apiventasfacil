@@ -1,6 +1,6 @@
 ﻿using Core.DTOs;
 using Core.Entities;
-using Core.Interfaces;
+using Core.Interfaces.Services;
 using Core.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

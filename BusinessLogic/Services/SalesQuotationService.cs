@@ -1,6 +1,7 @@
 ﻿using Core.DTOs;
 using Core.DTOs.SalesQuotation;
-using Core.Interfaces;
+using Core.Interfaces.Repositories;
+using Core.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.Net.Http;

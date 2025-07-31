@@ -1,6 +1,5 @@
 using BusinessLogic.Data;
 using BusinessLogic.Services;
-using Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using WebApi.Filters;
@@ -9,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Net.Http.Headers;
 using BusinessLogic.Repositories;
+using Core.Interfaces.Repositories;
+using Core.Interfaces.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -61,6 +62,15 @@ builder.Services.AddScoped<ISapSessionService, SapSessionService>();
 
 builder.Services.AddScoped<ISalesQuotationRepository, SalesQuotationRepository>();
 builder.Services.AddScoped<ISalesQuotationService, SalesQuotationService>();
+
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+
+builder.Services.AddScoped<IItemRepository, ItemRepository>();
+builder.Services.AddScoped<IItemService, ItemService>();
+
+builder.Services.AddScoped<IUnitOfMeasureRepository, UnitOfMeasureRepository>();
+builder.Services.AddScoped<IUnitOfMeasureService, UnitOfMeasureService>();
 
 // Para la cadena de conexión a la base de datos
 builder.Services.AddScoped<IConnectionStringService, ConnectionStringService>();
