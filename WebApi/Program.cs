@@ -60,6 +60,9 @@ builder.Services.AddScoped<IUserSeriesService, UserSeriesService>();
 
 builder.Services.AddScoped<ISapSessionService, SapSessionService>();
 
+builder.Services.AddScoped<ISalesPersonRepository, SalesPersonRepository>();
+builder.Services.AddScoped<ISalesPersonService, SalesPersonService>();
+
 builder.Services.AddScoped<ISalesQuotationRepository, SalesQuotationRepository>();
 builder.Services.AddScoped<ISalesQuotationService, SalesQuotationService>();
 
@@ -72,6 +75,10 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<IUnitOfMeasureRepository, UnitOfMeasureRepository>();
 builder.Services.AddScoped<IUnitOfMeasureService, UnitOfMeasureService>();
 
+builder.Services.AddScoped<ITermsConditionsRepository, TermsConditionsRepository>();
+builder.Services.AddScoped<ITermsConditionsService, TermsConditionsService>();
+
+builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 // Para la cadena de conexión a la base de datos
 builder.Services.AddScoped<IConnectionStringService, ConnectionStringService>();
 

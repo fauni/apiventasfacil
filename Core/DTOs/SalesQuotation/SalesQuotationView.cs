@@ -19,10 +19,14 @@ namespace Core.DTOs.SalesQuotation
         public string U_NIT { get; set; }
         public string Comments { get; set; }
         public string SlpCode { get; set; }
+        public string SlpName { get; set; }
         public decimal DocTotal { get; set; }
         public string U_VF_TiempoEntrega { get; set; }
         public string U_VF_ValidezOferta { get; set; }
         public string U_VF_FormaPago { get; set; }
+        public string U_VF_TiempoEntregaName { get; set; }
+        public string U_VF_ValidezOfertaName { get; set; }
+        public string U_VF_FormaPagoName { get; set; }
         public List<SalesQuotationLineView> Lines { get; set; } = new ();
     }
 

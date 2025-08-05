@@ -28,8 +28,19 @@ namespace Core.Entities
         [Required]
         [MaxLength(255)]
         public string Password { get; set; }
+
+        // Nuevos campos SAP
+        public int? EmployeeCodeSap { get; set; }
+        [MaxLength(50)]
+        public string? AlmacenCode { get; set; }
+        [MaxLength(100)]
+        public string? UserSap { get; set; }
+        [MaxLength(255)]
+        public string? PasswordSap { get; set; }
+
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+
 
         public ICollection<UserSerie> UserSeries { get; set; } = new List<UserSerie>();
     }

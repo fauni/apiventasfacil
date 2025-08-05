@@ -57,14 +57,35 @@ namespace BusinessLogic.Repositories
         public async Task<List<SalesQuotationView>> GetSalesQuotationsAsync()
         {
             var parameters = await _parameterService.GetParametersByGroupAsync("ireilab");
-
-            // var connectionString = $"Server=localhost;Database={db};User Id={user};Password={password};TrustServerCertificate=True;";
             var connectionString = _connectionStringService.BuildSqlServerConnectionString(parameters.ServerDatabase, parameters.Database, parameters.UserDatabase, parameters.PasswordDatabase);
 
             var query = @"
-                    SELECT TOP 20 DocEntry, DocNum, TaxDate, DocDate, CardCode, CardName, U_LB_RazonSocial, U_NIT, 
-                    Comments, SlpCode, DocTotal, U_VF_TiempoEntrega, U_VF_ValidezOferta, U_VF_FormaPago 
-                    FROM OQUT ORDER BY DocEntry DESC";
+                SELECT TOP 20 
+                q.DocEntry, 
+                q.DocNum, 
+                q.TaxDate, 
+                q.DocDate, 
+                q.CardCode, 
+                q.CardName, 
+                q.U_LB_RazonSocial, 
+                q.U_NIT, 
+                q.Comments, 
+                q.SlpCode, 
+                sp.SlpName,
+                q.DocTotal, 
+                q.U_VF_TiempoEntrega,
+                q.U_VF_ValidezOferta,
+                q.U_VF_FormaPago,
+                te.Name as U_VF_TiempoEntregaName,
+                vo.Name as U_VF_ValidezOfertaName,
+                fp.Name as U_VF_FormaPagoName
+                FROM OQUT q
+                LEFT JOIN OSLP sp ON sp.SlpCode = q.SlpCode
+                LEFT JOIN [@VF_TIEMPO_ENTREGA] te ON q.U_VF_TiempoEntrega = te.Code
+                LEFT JOIN [@VF_VALIDEZ_OFERTA] vo ON q.U_VF_ValidezOferta = vo.Code  
+                LEFT JOIN [@VF_FORMA_PAGO] fp ON q.U_VF_FormaPago = fp.Code
+                ORDER BY q.DocEntry DESC
+            ";
             var queryLines = @"
                 SELECT ItemCode, Dscription, Quantity, UomCode, PriceAfVAT, LineTotal, GTotal 
                 FROM QUT1 WHERE DocEntry = @DocEntry";
@@ -93,10 +114,17 @@ namespace BusinessLogic.Repositories
                         U_NIT = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_NIT")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_NIT")),
                         Comments = readerHeader.IsDBNull(readerHeader.GetOrdinal("Comments")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("Comments")),
                         SlpCode = readerHeader.IsDBNull(readerHeader.GetOrdinal("SlpCode")) ? "" : readerHeader.GetInt32(readerHeader.GetOrdinal("SlpCode")).ToString(),
+                        SlpName = readerHeader.IsDBNull(readerHeader.GetOrdinal("SlpName")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("SlpName")),
                         DocTotal = readerHeader.IsDBNull(readerHeader.GetOrdinal("DocTotal")) ? 0 : readerHeader.GetDecimal(readerHeader.GetOrdinal("DocTotal")),
+                        
                         U_VF_TiempoEntrega = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_TiempoEntrega")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_TiempoEntrega")),
                         U_VF_ValidezOferta = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_ValidezOferta")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_ValidezOferta")),
                         U_VF_FormaPago = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_FormaPago")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_FormaPago")),
+
+                        U_VF_TiempoEntregaName = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_TiempoEntregaName")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_TiempoEntregaName")),
+                        U_VF_ValidezOfertaName = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_ValidezOfertaName")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_ValidezOfertaName")),
+                        U_VF_FormaPagoName = readerHeader.IsDBNull(readerHeader.GetOrdinal("U_VF_FormaPagoName")) ? "" : readerHeader.GetString(readerHeader.GetOrdinal("U_VF_FormaPagoName")),
+
                         Lines = new List<SalesQuotationLineView>()
                     });
                 }

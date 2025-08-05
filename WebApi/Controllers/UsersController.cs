@@ -13,11 +13,13 @@ namespace WebApi.Controllers
     {
         private readonly IUserService _userService;
         private readonly IJwtService _jwtService;
+        private readonly ISalesPersonService _salesPersonService;
 
-        public UsersController(IUserService userService, IJwtService jwtService)
+        public UsersController(IUserService userService, IJwtService jwtService, ISalesPersonService salesPersonService)
         {
             _userService = userService;
             _jwtService = jwtService;
+            _salesPersonService = salesPersonService;
         }
 
         [HttpPost]
@@ -35,7 +37,20 @@ namespace WebApi.Controllers
             if (user == null) return Unauthorized(ApiResponse<string>.Fail("Nombre de usuario o contraseña no válidos."));
 
             var token = _jwtService.GenerateToken(user);
-            
+
+            // Obtener datos del vendedor SAP si el Usuario tiene configuración SAP
+            SalesPersonDto? salesPerson = null;
+            if (user.EmployeeCodeSap.HasValue && user.EmployeeCodeSap.Value > 0)
+            {
+                try
+                {
+                    salesPerson = await _salesPersonService.GetSalesPersonByCodeAsync(user.EmployeeCodeSap.Value);
+                } catch(Exception ex)
+                {
+
+                }
+            }
+
             return Ok(ApiResponse<Object>.Ok(new 
             {
                 token,
@@ -44,8 +59,19 @@ namespace WebApi.Controllers
                     user.Name,
                     user.Username,
                     user.Email,
-                    user.Type
-                }
+                    user.Type,
+                    user.EmployeeCodeSap,
+                    user.AlmacenCode
+                },
+                salesPerson = salesPerson != null ? new
+                {
+                    salesPerson.SlpCode,
+                    salesPerson.SlpName,
+                    salesPerson.Memo,
+                    salesPerson.Active,
+                    salesPerson.IsActive,
+                    salesPerson.DisplayName
+                } : null
             }, "Inicio de sesión exitosa."));
         }
     }
