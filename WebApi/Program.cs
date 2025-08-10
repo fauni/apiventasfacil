@@ -66,6 +66,9 @@ builder.Services.AddScoped<ISalesPersonService, SalesPersonService>();
 builder.Services.AddScoped<ISalesQuotationRepository, SalesQuotationRepository>();
 builder.Services.AddScoped<ISalesQuotationService, SalesQuotationService>();
 
+builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+
 builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 

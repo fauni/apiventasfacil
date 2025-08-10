@@ -7,11 +7,13 @@ using iText.Layout.Properties;
 using iText.Kernel.Colors;
 using iText.IO.Font.Constants;
 using iText.Kernel.Font;
+using iText.IO.Image;
+using iText.Layout.Borders;
 using System.IO;
 
 namespace BusinessLogic.Services
 {
-    public class PdfReportService: IPdfReportService
+    public class PdfReportService : IPdfReportService
     {
         private readonly ISalesQuotationRepository _quotationRepository;
 
@@ -22,7 +24,6 @@ namespace BusinessLogic.Services
 
         public async Task<byte[]> GenerateQuotationPdfAsync(int docEntry)
         {
-            // Obtener datos de la cotización
             var quotations = await _quotationRepository.GetSalesQuotationsAsync();
             var quotation = quotations.FirstOrDefault(q => q.DocEntry == docEntry);
 
@@ -40,259 +41,491 @@ namespace BusinessLogic.Services
             var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
             var regularFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
 
-            // Header
-            BuildHeader(document, quotation, boldFont);
+            // Header con logo y número de cotización (formato EIREILAB)
+            BuildEireilabHeader(document, quotation, boldFont, regularFont);
 
-            // Información del cliente
-            BuildCustomerSection(document, quotation, boldFont, regularFont);
+            BuildTitleHeader(document, quotation, boldFont, regularFont);
 
-            // Información del documento
-            BuildDocumentSection(document, quotation, boldFont, regularFont);
+            // Información del cliente (formato EIREILAB)
+            BuildEireilabCustomerInfo(document, quotation, boldFont, regularFont);
 
-            // Términos y condiciones
-            BuildTermsSection(document, quotation, boldFont, regularFont);
+            // Tabla de productos (formato EIREILAB)
+            BuildEireilabProductsTable(document, quotation, boldFont, regularFont);
 
-            // Líneas de productos
-            BuildProductsSection(document, quotation, boldFont, regularFont);
+            // Total y términos (formato EIREILAB)
+            BuildEireilabTotalAndTerms(document, quotation, boldFont, regularFont);
 
-            // Total
-            BuildTotalSection(document, quotation, boldFont);
-
-            // Footer
-            BuildFooter(document, regularFont);
+            // Footer con contactos (formato EIREILAB)
+            BuildEireilabFooter(document, regularFont);
 
             document.Close();
-
             return memoryStream.ToArray();
         }
 
-        private void BuildHeader(Document document, dynamic quotation, PdfFont boldFont)
+        private void BuildEireilabHeader(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
         {
-            var headerTable = new Table(2);
+            // Header con logo y datos principales
+            var headerTable = new Table(UnitValue.CreatePercentArray(new float[] { 40f, 40f, 30f }));
             headerTable.SetWidth(UnitValue.CreatePercentValue(100));
 
-            // Información de la cotización
-            var quotationInfo = new Paragraph()
-                .Add(new Text("COTIZACIÓN").SetFont(boldFont).SetFontSize(24).SetFontColor(ColorConstants.WHITE))
-                .Add("\n")
-                .Add(new Text($"Número: {quotation.DocNum}").SetFont(boldFont).SetFontSize(14).SetFontColor(ColorConstants.WHITE))
-                .Add("\n")
-                .Add(new Text($"Doc Entry: {quotation.DocEntry}").SetFontSize(12).SetFontColor(ColorConstants.WHITE));
+            // Celda del logo EIREILAB
+            var logoCell = CreateEireilabLogoCell()
+                .SetTextAlignment(TextAlignment.LEFT)
+                .SetPaddingLeft(0);
+            headerTable.AddCell(logoCell);
 
-            // Total
-            var totalInfo = new Paragraph($"Bs. {quotation.DocTotal:N2}")
-                .SetFont(boldFont)
-                .SetFontSize(20)
-                .SetFontColor(ColorConstants.WHITE)
-                .SetTextAlignment(TextAlignment.RIGHT);
+            // Espacio intermedio
+            headerTable.AddCell(new Cell().SetBorder(Border.NO_BORDER));
 
-            var headerCell1 = new Cell().Add(quotationInfo)
-                .SetBackgroundColor(ColorConstants.BLUE)
-                .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
-                .SetPadding(20);
+            // Celda derecha con datos de la cotización (cuadro amarillo)
+            var infoTable = new Table(UnitValue.CreatePercentArray(new float[] { 100f }));
+            infoTable.SetWidth(UnitValue.CreatePercentValue(100));
 
-            var headerCell2 = new Cell().Add(totalInfo)
-                .SetBackgroundColor(ColorConstants.BLUE)
-                .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
-                .SetPadding(20);
+            // Número de cotización con fondo amarillo
+            var numeroCell = new Cell()
+                .Add(new Paragraph()
+                    .Add(new Text("N° "))
+                    .Add(new Text($"CTZ-{quotation.DocNum ?? "001"}/2024"))
+                    .SetFont(boldFont)
+                    .SetFontSize(10)
+                    .SetTextAlignment(TextAlignment.LEFT))
+                .SetBackgroundColor(ColorConstants.WHITE)
+                .SetBorder(new SolidBorder(ColorConstants.WHITE, 1))
+                .SetPadding(3);
+            infoTable.AddCell(numeroCell);
 
-            headerTable.AddCell(headerCell1);
-            headerTable.AddCell(headerCell2);
+            // Sucursal
+            var sucursalCell = new Cell()
+                .Add(new Paragraph()
+                    .Add(new Text("SUCURSAL: ").SetFont(boldFont).SetFontSize(8))
+                    .Add(new Text("LA PAZ").SetFont(regularFont).SetFontSize(8)))
+                .SetBorder(new SolidBorder(ColorConstants.WHITE, 1))
+                .SetPadding(3);
+            infoTable.AddCell(sucursalCell);
+
+            // Fecha
+            var fechaCell = new Cell()
+                .Add(new Paragraph()
+                    .Add(new Text("FECHA: ").SetFont(boldFont).SetFontSize(8))
+                    .Add(new Text(DateTime.Now.ToString("dd/MM/yyyy")).SetFont(regularFont).SetFontSize(8)))
+                .SetBorder(new SolidBorder(ColorConstants.WHITE, 1))
+                .SetPadding(3);
+            infoTable.AddCell(fechaCell);
+
+            var rightCell = new Cell().Add(infoTable).SetBorder(Border.NO_BORDER);
+            headerTable.AddCell(rightCell);
 
             document.Add(headerTable);
-            document.Add(new Paragraph("\n"));
         }
 
-        private void BuildCustomerSection(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
+        private void BuildTitleHeader(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
         {
-            document.Add(new Paragraph("INFORMACIÓN DEL CLIENTE")
-                .SetFont(boldFont)
-                .SetFontSize(14)
-                .SetMarginBottom(10));
+            // Header con logo y datos principales
+            var titleTable = new Table(UnitValue.CreatePercentArray(new float[] { 100f }));
+            titleTable.SetWidth(UnitValue.CreatePercentValue(100));
 
-            var customerTable = new Table(2);
-            customerTable.SetWidth(UnitValue.CreatePercentValue(100));
 
-            AddInfoRow(customerTable, "Código:", quotation.CardCode?.ToString() ?? "", regularFont, boldFont);
-            AddInfoRow(customerTable, "Nombre:", quotation.CardName?.ToString() ?? "", regularFont, boldFont);
+            // Celda central con "COTIZACIÓN"
+            var cotizacionCell = new Cell()
+                .Add(new Paragraph("COTIZACIÓN")
+                    .SetFont(boldFont)
+                    .SetFontSize(20)
+                    .SetTextAlignment(TextAlignment.CENTER)
+                    .SetMarginTop(10))
+                .SetBorder(Border.NO_BORDER)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+            titleTable.AddCell(cotizacionCell);
 
-            if (!string.IsNullOrEmpty(quotation.U_LB_RazonSocial?.ToString()))
-                AddInfoRow(customerTable, "Razón Social:", quotation.U_LB_RazonSocial.ToString(), regularFont, boldFont);
-
-            if (!string.IsNullOrEmpty(quotation.U_NIT?.ToString()))
-                AddInfoRow(customerTable, "NIT:", quotation.U_NIT.ToString(), regularFont, boldFont);
-
-            if (!string.IsNullOrEmpty(quotation.SlpName?.ToString()))
-                AddInfoRow(customerTable, "Vendedor:", $"{quotation.SlpName} ({quotation.SlpCode})", regularFont, boldFont);
-
-            document.Add(customerTable);
-            document.Add(new Paragraph("\n"));
+            document.Add(titleTable);
         }
 
-        private void BuildDocumentSection(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
+
+        private Cell CreateEireilabLogoCell()
         {
-            document.Add(new Paragraph("INFORMACIÓN DEL DOCUMENTO")
-                .SetFont(boldFont)
-                .SetFontSize(14)
-                .SetMarginBottom(10));
-
-            var docTable = new Table(2);
-            docTable.SetWidth(UnitValue.CreatePercentValue(100));
-
-            var docDate = DateTime.Parse(quotation.DocDate.ToString()).ToString("dd/MM/yyyy");
-            var taxDate = DateTime.Parse(quotation.TaxDate.ToString()).ToString("dd/MM/yyyy");
-
-            AddInfoRow(docTable, "Fecha Documento:", docDate, regularFont, boldFont);
-            AddInfoRow(docTable, "Fecha Impuesto:", taxDate, regularFont, boldFont);
-
-            if (!string.IsNullOrEmpty(quotation.Comments?.ToString()))
-                AddInfoRow(docTable, "Comentarios:", quotation.Comments.ToString(), regularFont, boldFont);
-
-            document.Add(docTable);
-            document.Add(new Paragraph("\n"));
-        }
-
-        private void BuildTermsSection(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
-        {
-            bool hasTerms = !string.IsNullOrEmpty(quotation.U_VF_TiempoEntregaName?.ToString()) ||
-                           !string.IsNullOrEmpty(quotation.U_VF_ValidezOfertaName?.ToString()) ||
-                           !string.IsNullOrEmpty(quotation.U_VF_FormaPagoName?.ToString());
-
-            if (!hasTerms) return;
-
-            document.Add(new Paragraph("TÉRMINOS Y CONDICIONES")
-                .SetFont(boldFont)
-                .SetFontSize(14)
-                .SetMarginBottom(10));
-
-            var termsTable = new Table(2);
-            termsTable.SetWidth(UnitValue.CreatePercentValue(100));
-
-            if (!string.IsNullOrEmpty(quotation.U_VF_TiempoEntregaName?.ToString()))
-                AddInfoRow(termsTable, "Tiempo de Entrega:",
-                    $"{quotation.U_VF_TiempoEntregaName} (Código: {quotation.U_VF_TiempoEntrega})",
-                    regularFont, boldFont);
-
-            if (!string.IsNullOrEmpty(quotation.U_VF_ValidezOfertaName?.ToString()))
-                AddInfoRow(termsTable, "Validez de Oferta:",
-                    $"{quotation.U_VF_ValidezOfertaName} (Código: {quotation.U_VF_ValidezOferta})",
-                    regularFont, boldFont);
-
-            if (!string.IsNullOrEmpty(quotation.U_VF_FormaPagoName?.ToString()))
-                AddInfoRow(termsTable, "Forma de Pago:",
-                    $"{quotation.U_VF_FormaPagoName} (Código: {quotation.U_VF_FormaPago})",
-                    regularFont, boldFont);
-
-            document.Add(termsTable);
-            document.Add(new Paragraph("\n"));
-        }
-
-        private void BuildProductsSection(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
-        {
-            document.Add(new Paragraph("PRODUCTOS")
-                .SetFont(boldFont)
-                .SetFontSize(14)
-                .SetMarginBottom(10));
-
-            var productsTable = new Table(6);
-            productsTable.SetWidth(UnitValue.CreatePercentValue(100));
-
-            // Headers
-            AddTableHeader(productsTable, "#", boldFont);
-            AddTableHeader(productsTable, "Producto", boldFont);
-            AddTableHeader(productsTable, "Cantidad", boldFont);
-            AddTableHeader(productsTable, "UOM", boldFont);
-            AddTableHeader(productsTable, "Precio", boldFont);
-            AddTableHeader(productsTable, "Total", boldFont);
-
-            // Data rows
-            int index = 1;
-            foreach (var line in quotation.Lines)
+            try
             {
-                AddTableCell(productsTable, index.ToString(), regularFont);
-                AddTableCell(productsTable, $"{line.ItemCode}\n{line.Dscription}", regularFont);
-                AddTableCell(productsTable, line.Quantity.ToString("N2"), regularFont);
-                AddTableCell(productsTable, line.UomCode?.ToString() ?? "", regularFont);
-                AddTableCell(productsTable, $"Bs. {line.PriceAfVAT:N2}", regularFont);
-                AddTableCell(productsTable, $"Bs. {line.GTotal:N2}", regularFont);
-                index++;
+                var logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "ireilab.jpg");
+
+                if (File.Exists(logoPath))
+                {
+                    var logoData = ImageDataFactory.Create(logoPath);
+                    var logo = new Image(logoData);
+                    logo.SetWidth(120);
+                    logo.SetHeight(30);
+                    logo.SetAutoScale(true);
+
+                    return new Cell()
+                        .Add(logo)
+                        .SetBorder(Border.NO_BORDER)
+                        .SetVerticalAlignment(VerticalAlignment.MIDDLE)
+                        .SetTextAlignment(TextAlignment.LEFT);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cargando logo: {ex.Message}");
             }
 
-            document.Add(productsTable);
-            document.Add(new Paragraph("\n"));
+            // Fallback: texto EIREILAB
+            return new Cell()
+                .Add(new Paragraph("EIREILAB S.R.L.")
+                    .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD))
+                    .SetFontSize(12)
+                    .Add("\nEQUIPOS, REACTIVOS E INSUMOS DE LABORATORIO"))
+                .SetBorder(Border.NO_BORDER)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
         }
 
-        private void BuildTotalSection(Document document, dynamic quotation, PdfFont boldFont)
+        private void BuildEireilabCustomerInfo(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
         {
-            var totalTable = new Table(2);
-            totalTable.SetWidth(UnitValue.CreatePercentValue(100));
+            // Información del cliente
+            var clientTable = new Table(UnitValue.CreatePercentArray(new float[] { 35f, 65f }));
+            clientTable
+                .SetWidth(UnitValue.CreatePercentValue(100))
+                .SetBorder(Border.NO_BORDER)
+                .SetMarginTop(0)
+                .SetMarginBottom(0);
 
-            var totalLabel = new Cell().Add(new Paragraph("TOTAL GENERAL:")
-                .SetFont(boldFont)
-                .SetFontSize(16))
-                .SetBackgroundColor(ColorConstants.LIGHT_GRAY)
-                .SetPadding(15);
+            // Nombre de la institución
+            AddClientInfoRow(clientTable, "NOMBRE DE LA INSTITUCIÓN:",
+                quotation.CardName?.ToString() ?? "N/A", boldFont, regularFont);
 
-            var totalValue = new Cell().Add(new Paragraph($"Bs. {quotation.DocTotal:N2}")
-                .SetFont(boldFont)
-                .SetFontSize(18)
-                .SetFontColor(ColorConstants.BLUE)
-                .SetTextAlignment(TextAlignment.RIGHT))
-                .SetBackgroundColor(ColorConstants.LIGHT_GRAY)
-                .SetPadding(15);
+            // Razón Social
+            AddClientInfoRow(clientTable, "RAZÓN SOCIAL:",
+                quotation.U_LB_RazonSocial?.ToString() ?? quotation.CardName?.ToString() ?? "N/A", boldFont, regularFont);
 
-            totalTable.AddCell(totalLabel);
-            totalTable.AddCell(totalValue);
+            // NIT
+            AddClientInfoRow(clientTable, "NIT:",
+                quotation.U_NIT?.ToString() ?? "N/A", boldFont, regularFont);
 
-            document.Add(totalTable);
+            // Teléfono (si existe)
+            AddClientInfoRow(clientTable, "TELÉFONO / CELULAR",
+                "N/A", boldFont, regularFont);
+
+            // Email (si existe)
+            AddClientInfoRow(clientTable, "E-mail:",
+                "N/A", boldFont, regularFont);
+
+            document.Add(clientTable);
+            document.Add(new Paragraph("\n").SetMarginTop(5));
         }
 
-        private void BuildFooter(Document document, PdfFont regularFont)
+        private void AddClientInfoRow(Table table, string label, string value, PdfFont boldFont, PdfFont regularFont)
         {
-            document.Add(new Paragraph("\n"));
-            document.Add(new Paragraph("Generado desde SAP Sales App")
-                .SetFont(regularFont)
-                .SetFontSize(10)
-                .SetFontColor(ColorConstants.GRAY)
-                .SetTextAlignment(TextAlignment.CENTER));
+            var labelCell = new Cell()
+                .Add(new Paragraph(label).SetFont(boldFont).SetFontSize(9))
+                .SetBorder(new SolidBorder(ColorConstants.WHITE, 0.5f))
+                .SetPaddingTop(1)    // Reducido padding superior
+                .SetPaddingBottom(1) // Reducido padding inferior
+                .SetPaddingLeft(4)   // Mantenido padding izquierdo
+                .SetPaddingRight(0)  // Eliminado padding derecho
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
 
-            document.Add(new Paragraph($"Fecha de generación: {DateTime.Now:dd/MM/yyyy HH:mm}")
-                .SetFont(regularFont)
-                .SetFontSize(10)
-                .SetFontColor(ColorConstants.GRAY)
-                .SetTextAlignment(TextAlignment.CENTER));
-        }
-
-        // Helper methods
-        private void AddInfoRow(Table table, string label, string value, PdfFont regularFont, PdfFont boldFont)
-        {
-            var labelCell = new Cell().Add(new Paragraph(label).SetFont(boldFont).SetFontSize(10));
-            var valueCell = new Cell().Add(new Paragraph(value).SetFont(regularFont).SetFontSize(10));
+            var valueCell = new Cell()
+                .Add(new Paragraph(value).SetFont(regularFont).SetFontSize(9))
+                .SetBorder(new SolidBorder(ColorConstants.WHITE, 0.5f))
+                .SetPaddingTop(1)    // Reducido padding superior
+                .SetPaddingBottom(1) // Reducido padding inferior
+                .SetPaddingLeft(0)   // Eliminado padding izquierdo
+                .SetPaddingRight(4)  // Mantenido padding derecho
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
 
             table.AddCell(labelCell);
             table.AddCell(valueCell);
         }
 
-        private void AddTableHeader(Table table, string text, PdfFont boldFont)
+        private void BuildEireilabProductsTable(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
         {
-            var cell = new Cell().Add(new Paragraph(text)
-                .SetFont(boldFont)
-                .SetFontSize(10)
-                .SetTextAlignment(TextAlignment.CENTER))
-                .SetBackgroundColor(ColorConstants.LIGHT_GRAY)
-                .SetPadding(8);
+            // Tabla de productos exacta al formato EIREILAB
+            var productsTable = new Table(UnitValue.CreatePercentArray(new float[] { 6f, 10f, 30f, 8f, 6f, 8f, 10f }));
+            productsTable.SetWidth(UnitValue.CreatePercentValue(100));
 
+            // Headers con fondo gris
+            var grayColor = new DeviceRgb(220, 220, 220);
+
+            AddProductHeader(productsTable, "ÍTEM", boldFont, grayColor);
+            AddProductHeader(productsTable, "COD.\nSIMEC", boldFont, grayColor);
+            AddProductHeader(productsTable, "DESCRIPCIÓN", boldFont, grayColor);
+            AddProductHeader(productsTable, "UNID.\nMEDIDA", boldFont, grayColor);
+            AddProductHeader(productsTable, "CANT.", boldFont, grayColor);
+            AddProductHeader(productsTable, "PRECIO\nUNITARIO", boldFont, grayColor);
+            AddProductHeader(productsTable, "PRECIO\nTOTAL", boldFont, grayColor);
+
+            // Filas de productos
+            int index = 1;
+            foreach (var line in quotation.Lines)
+            {
+                AddProductCell(productsTable, index.ToString(), regularFont);
+                AddProductCell(productsTable, line.ItemCode?.ToString() ?? "N/A", regularFont);
+                AddProductCell(productsTable, line.Dscription?.ToString() ?? "N/A", regularFont);
+                AddProductCell(productsTable, line.UomCode?.ToString() ?? "N/A", regularFont);
+                AddProductCell(productsTable, line.Quantity?.ToString("N0") ?? "0", regularFont);
+                AddProductCell(productsTable, $"Bs {line.PriceAfVAT:N2}", regularFont, HorizontalAlignment.RIGHT);
+                AddProductCell(productsTable, $"Bs {line.GTotal:N2}", regularFont, HorizontalAlignment.RIGHT);
+                index++;
+            }
+
+            // Fila de TOTAL
+            var totalRow = new Cell(1, 6)
+                .Add(new Paragraph("TOTAL").SetFont(boldFont).SetFontSize(10).SetTextAlignment(TextAlignment.RIGHT))
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(5)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+            productsTable.AddCell(totalRow);
+
+            var totalValueCell = new Cell()
+                .Add(new Paragraph($"Bs {quotation.DocTotal:N2}").SetFont(boldFont).SetFontSize(10))
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(5)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+            productsTable.AddCell(totalValueCell);
+
+            var totalText = ConvertNumberToWords(quotation.DocTotal ?? 0);
+            var totalNumberValueCell = new Cell(1,8)
+                .Add(new Paragraph($"Son: {totalText}").SetTextAlignment(TextAlignment.RIGHT))
+                .SetFont(boldFont)
+                .SetFontSize(9)
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(0)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE)
+                .SetHorizontalAlignment(HorizontalAlignment.LEFT);
+
+            productsTable.AddCell(totalNumberValueCell);
+
+            document.Add(productsTable);
+
+            document.Add(new Paragraph("\n").SetMarginTop(3));
+        }
+
+        private void AddProductHeader(Table table, string text, PdfFont boldFont, Color backgroundColor)
+        {
+            var cell = new Cell()
+                .Add(new Paragraph(text)
+                    .SetFont(boldFont)
+                    .SetFontSize(8)
+                    .SetTextAlignment(TextAlignment.CENTER))
+                .SetBackgroundColor(backgroundColor)
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(3)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
             table.AddCell(cell);
         }
 
-        private void AddTableCell(Table table, string text, PdfFont regularFont)
+        private void AddProductCell(Table table, string text, PdfFont regularFont, HorizontalAlignment horizontalAlignment = HorizontalAlignment.CENTER)
         {
-            var cell = new Cell().Add(new Paragraph(text)
-                .SetFont(regularFont)
-                .SetFontSize(9))
-                .SetPadding(6);
-
+            var cell = new Cell()
+                .Add(new Paragraph(text)
+                    .SetFont(regularFont)
+                    .SetFontSize(8)
+                    .SetTextAlignment((TextAlignment?)horizontalAlignment))
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 0.5f))
+                .SetPadding(3)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE)
+                .SetHorizontalAlignment(horizontalAlignment);
             table.AddCell(cell);
+        }
+
+        private void BuildEireilabTotalAndTerms(Document document, dynamic quotation, PdfFont boldFont, PdfFont regularFont)
+        {
+            // Términos y condiciones en tabla
+            var termsTable = new Table(UnitValue.CreatePercentArray(new float[] { 25f, 25f, 25f, 25f }));
+            termsTable.SetWidth(UnitValue.CreatePercentValue(100));
+
+            // Headers de términos
+            AddTermHeader(termsTable, "Tiempo de entrega:", boldFont);
+            AddTermHeader(termsTable, "Validez de la oferta:", boldFont);
+            AddTermHeader(termsTable, "Forma de pago:", boldFont);
+            AddTermHeader(termsTable, "OBSERVACIÓN", boldFont);
+
+            // Valores de términos
+            AddTermValue(termsTable, GetTermValue(quotation.U_VF_TiempoEntregaName, "INMEDIATO"), regularFont);
+            AddTermValue(termsTable, GetTermValue(quotation.U_VF_ValidezOfertaName, "30 DIAS"), regularFont);
+            AddTermValue(termsTable, GetTermValue(quotation.U_VF_FormaPagoName, "CREDITO"), regularFont);
+            AddTermValue(termsTable, quotation.Comments?.ToString() ?? "", regularFont);
+
+            document.Add(termsTable);
+
+            // Mensaje estándar
+            document.Add(new Paragraph("\n"));
+            document.Add(new Paragraph("SI USTED TIENE ALGUNA DUDA DE LA COTIZACIÓN, PÓNGASE EN CONTACTO CON NOSOTROS. ESPEREMOS SEA DE SU INTERÉS NUESTRA COTIZACIÓN.")
+                .SetFont(regularFont)
+                .SetFontSize(8)
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginTop(10)
+                .SetMarginBottom(15));
+
+            document.Add(new Paragraph("\n").SetMarginTop(5));
+
+            // Firma
+            document.Add(new Paragraph("_".PadRight(50, '_'))
+                .SetFont(regularFont)
+                .SetFontSize(8)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            document.Add(new Paragraph(quotation.SlpName?.ToString() ?? "REPRESENTANTE DE VENTAS")
+                .SetFont(boldFont)
+                .SetFontSize(9)
+                .SetTextAlignment(TextAlignment.CENTER)
+                .SetMarginTop(0));
+        }
+
+        private void AddTermHeader(Table table, string text, PdfFont boldFont)
+        {
+            var cell = new Cell()
+                .Add(new Paragraph(text).SetFont(boldFont).SetFontSize(8))
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(4)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+            table.AddCell(cell);
+        }
+
+        private void AddTermValue(Table table, string text, PdfFont regularFont)
+        {
+            var cell = new Cell()
+                .Add(new Paragraph(text).SetFont(regularFont).SetFontSize(8))
+                .SetBorder(new SolidBorder(ColorConstants.BLACK, 1))
+                .SetPadding(4)
+                .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+            table.AddCell(cell);
+        }
+
+        private string GetTermValue(object termName, string defaultValue)
+        {
+            return !string.IsNullOrEmpty(termName?.ToString()) ? termName.ToString() : defaultValue;
+        }
+
+        private void BuildEireilabFooter(Document document, PdfFont regularFont)
+        {
+            document.Add(new Paragraph("\n").SetMarginTop(15));
+
+            // Footer con contactos múltiples (formato EIREILAB)
+            var footerText = new Paragraph()
+                .Add(new Text("Telf. 42266569 – 71743513\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Telf. 2228098 – 72005456\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Telf. 3302594 – 76754727\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Telf. 71232547 - 72879119\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Telf. 62850153 - 62850152").SetFont(regularFont).SetFontSize(6))
+                .Add("\n")
+                .Add(new Text("Calle: Héroes del Boqueron\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Calle: Francisco Miranda\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Avenida: Suarez Arana\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Calle: 1ro de mayo #31 /\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Calle: 15 de abril entre").SetFont(regularFont).SetFontSize(6))
+                .Add("\n")
+                .Add(new Text("#1476 / Zona Muyurina\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("#2198 / Zona Miraflores\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("esq. Calle Mandiore # 280\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Zona Central\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Junin y O´Connor #625").SetFont(regularFont).SetFontSize(6))
+                .Add("\n")
+                .Add(new Text("Cochabamba – Bolivia\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("La Paz - Bolivia\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Santa Cruz – Bolivia\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Sucre – Bolivia\t").SetFont(regularFont).SetFontSize(6))
+                .Add(new Text("Tarija - Bolivia").SetFont(regularFont).SetFontSize(6))
+                .Add("\n")
+                .Add(new Text("E-mail: gatnacional@ireilab.com.bo").SetFont(regularFont).SetFontSize(6))
+                .SetTextAlignment(TextAlignment.CENTER);
+
+            document.Add(footerText);
+        }
+
+        private string ConvertNumberToWords(decimal number)
+        {
+            if (number == 0)
+                return "CERO 00/100 Bolivianos";
+
+            var integerPart = (int)Math.Floor(number);
+            var decimalPart = (int)Math.Round((number - integerPart) * 100);
+
+            string result = ConvertIntegerToWords(integerPart);
+
+            // Manejo de singular/plural
+            result += integerPart == 1 ? " BOLIVIANO" : " BOLIVIANOS";
+            result += $" {decimalPart:00}/100";
+
+            return result;
+        }
+
+        private string ConvertIntegerToWords(int number)
+        {
+            if (number == 0)
+                return "CERO";
+
+            if (number < 0)
+                return "MENOS " + ConvertIntegerToWords(Math.Abs(number));
+
+            string words = "";
+
+            if ((number / 1000000) > 0)
+            {
+                words += ConvertIntegerToWords(number / 1000000) + " MILLÓN" + (number / 1000000 > 1 ? "ES " : " ");
+                number %= 1000000;
+            }
+
+            if ((number / 1000) > 0)
+            {
+                words += ConvertIntegerToWords(number / 1000) + " MIL ";
+                number %= 1000;
+            }
+
+            if ((number / 100) > 0)
+            {
+                int hundreds = number / 100;
+                if (hundreds == 1 && number % 100 == 0)
+                {
+                    words += "CIEN";
+                }
+                else if (hundreds == 1)
+                {
+                    words += "CIENTO ";
+                }
+                else if (hundreds == 5)
+                {
+                    words += "QUINIENTOS ";
+                }
+                else if (hundreds == 7)
+                {
+                    words += "SETECIENTOS ";
+                }
+                else if (hundreds == 9)
+                {
+                    words += "NOVECIENTOS ";
+                }
+                else
+                {
+                    words += ConvertIntegerToWords(hundreds) + " CIENTOS ";
+                }
+                number %= 100;
+            }
+
+            if (number > 0)
+            {
+                if (words != "")
+                    words += " ";
+
+                var unitsMap = new[] { "CERO", "UN", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE", "DIEZ",
+                              "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE" };
+                var tensMap = new[] { "CERO", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA" };
+
+                if (number < 20)
+                    words += unitsMap[number];
+                else
+                {
+                    if (number == 21)
+                        words += "VEINTIÚN";
+                    else if (number >= 22 && number <= 29)
+                        words += "VEINTI" + unitsMap[number % 10];
+                    else
+                    {
+                        words += tensMap[number / 10];
+                        if ((number % 10) > 0)
+                            words += " Y " + unitsMap[number % 10];
+                    }
+                }
+            }
+
+            return words.Trim();
         }
     }
 }

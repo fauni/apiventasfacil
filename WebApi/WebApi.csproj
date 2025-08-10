@@ -22,4 +22,10 @@
     <ProjectReference Include="..\BusinessLogic\BusinessLogic.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+	  <Content Include="Resources\ireilab.jpg">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+  </ItemGroup>
+
 </Project>

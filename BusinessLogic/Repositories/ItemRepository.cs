@@ -33,7 +33,7 @@ namespace BusinessLogic.Repositories
                     parameters.UserDatabase,
                     parameters.PasswordDatabase);
 
-                var whereClause = new StringBuilder("WHERE 1=1");
+                var whereClause = new StringBuilder("WHERE 1=1 AND frozenFor = 'N'");
                 var sqlParameters = new DynamicParameters();
 
                 // Filtros de búsqueda
