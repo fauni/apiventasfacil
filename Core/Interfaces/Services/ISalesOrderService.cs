@@ -9,8 +9,10 @@ namespace Core.Interfaces.Services
 {
     public interface ISalesOrderService
     {
-        Task<SalesOrderResponseDto> CreateSalesOrderAsync(SalesOrderDto salesOrderDto);
-        Task<List<SalesOrderViewDto>> GetSalesOrdersAsync();
-        Task<SalesOrderViewDto?> GetSalesOrderByIdAsync(int docEntry);
+        Task<SalesOrderSearchResponse> SearchSalesOrdersAsync(SalesOrderSearchRequest request);
+        Task<SalesOrderView> GetSalesOrderByIdAsync(int docEntry);
+        Task<List<SalesOrderView>> GetSalesOrdersByCustomerAsync(string cardCode, int pageSize = 20, int pageNumber = 1);
+        Task<List<SalesOrderView>> GetSalesOrdersBySalesPersonAsync(int slpCode, int pageSize = 20, int pageNumber = 1);
+        Task<string> CreateSalesOrderAsync(SalesOrderDto orderDto);
     }
 }

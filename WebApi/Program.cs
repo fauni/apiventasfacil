@@ -81,6 +81,9 @@ builder.Services.AddScoped<IUnitOfMeasureService, UnitOfMeasureService>();
 builder.Services.AddScoped<ITermsConditionsRepository, TermsConditionsRepository>();
 builder.Services.AddScoped<ITermsConditionsService, TermsConditionsService>();
 
+builder.Services.AddScoped<IPaymentGroupRepository, PaymentGroupRepository>();
+builder.Services.AddScoped<IPaymentGroupService, PaymentGroupService>();
+
 builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 // Para la cadena de conexión a la base de datos
 builder.Services.AddScoped<IConnectionStringService, ConnectionStringService>();

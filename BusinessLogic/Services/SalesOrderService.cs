@@ -13,68 +13,69 @@ namespace BusinessLogic.Services
     public class SalesOrderService : ISalesOrderService
     {
         private readonly ISalesOrderRepository _repository;
-        private readonly IParameterService _parameterService;
-        private readonly ISapSessionService _sapSessionService;
-        private readonly ILogger<SalesOrderService> _logger;
 
-        public SalesOrderService(
-            ISalesOrderRepository repository,
-            IParameterService parameterService,
-            ISapSessionService sapSessionService,
-            ILogger<SalesOrderService> logger)
+        public SalesOrderService(ISalesOrderRepository repository)
         {
             _repository = repository;
-            _parameterService = parameterService;
-            _sapSessionService = sapSessionService;
-            _logger = logger;
         }
 
-        public async Task<SalesOrderResponseDto> CreateSalesOrderAsync(SalesOrderDto salesOrderDto)
+        public async Task<SalesOrderSearchResponse> SearchSalesOrdersAsync(SalesOrderSearchRequest request)
         {
-            try
-            {
-                _logger.LogInformation("Iniciando creación de orden de venta para cliente: {CardCode}", salesOrderDto.CardCode);
+            // Validar parámetros de entrada
+            if (request.PageSize > 50) request.PageSize = 50;
+            if (request.PageSize < 1) request.PageSize = 20;
+            if (request.PageNumber < 1) request.PageNumber = 1;
 
-                var result = await _repository.CreateSalesOrderAsync(salesOrderDto);
-
-                _logger.LogInformation("Orden de venta creada exitosamente. DocEntry: {DocEntry}, DocNum: {DocNum}",
-                    result.DocEntry, result.DocNum);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear orden de venta para cliente: {CardCode}", salesOrderDto.CardCode);
-                throw new Exception($"Error al crear orden de venta: {ex.Message}", ex);
-            }
+            return await _repository.SearchSalesOrdersAsync(request);
         }
 
-        public async Task<List<SalesOrderViewDto>> GetSalesOrdersAsync()
+        public async Task<SalesOrderView> GetSalesOrderByIdAsync(int docEntry)
         {
-            try
-            {
-                _logger.LogInformation("Obteniendo órdenes de venta");
-                return await _repository.GetSalesOrdersAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener órdenes de venta");
-                throw new Exception($"Error al obtener órdenes de venta: {ex.Message}", ex);
-            }
+            if (docEntry <= 0)
+                throw new ArgumentException("DocEntry debe ser mayor a 0", nameof(docEntry));
+
+            return await _repository.GetSalesOrderByIdAsync(docEntry);
         }
 
-        public async Task<SalesOrderViewDto?> GetSalesOrderByIdAsync(int docEntry)
+        public async Task<List<SalesOrderView>> GetSalesOrdersByCustomerAsync(string cardCode, int pageSize = 20, int pageNumber = 1)
         {
-            try
-            {
-                _logger.LogInformation("Obteniendo orden de venta con DocEntry: {DocEntry}", docEntry);
-                return await _repository.GetSalesOrderByIdAsync(docEntry);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener orden de venta con DocEntry: {DocEntry}", docEntry);
-                throw new Exception($"Error al obtener orden de venta: {ex.Message}", ex);
-            }
+            if (string.IsNullOrEmpty(cardCode))
+                throw new ArgumentException("CardCode es requerido", nameof(cardCode));
+
+            // Validar parámetros de paginación
+            if (pageSize > 50) pageSize = 50;
+            if (pageSize < 1) pageSize = 20;
+            if (pageNumber < 1) pageNumber = 1;
+
+            return await _repository.GetSalesOrdersByCustomerAsync(cardCode, pageSize, pageNumber);
+        }
+
+        public async Task<List<SalesOrderView>> GetSalesOrdersBySalesPersonAsync(int slpCode, int pageSize = 20, int pageNumber = 1)
+        {
+            if (slpCode <= 0)
+                throw new ArgumentException("SlpCode debe ser mayor a 0", nameof(slpCode));
+
+            // Validar parámetros de paginación
+            if (pageSize > 50) pageSize = 50;
+            if (pageSize < 1) pageSize = 20;
+            if (pageNumber < 1) pageNumber = 1;
+
+            return await _repository.GetSalesOrdersBySalesPersonAsync(slpCode, pageSize, pageNumber);
+        }
+
+        public async Task<string> CreateSalesOrderAsync(SalesOrderDto orderDto)
+        {
+            // Validaciones básicas
+            if (string.IsNullOrEmpty(orderDto.CardCode))
+                throw new ArgumentException("CardCode es requerido");
+
+            if (orderDto.DocumentLines == null || !orderDto.DocumentLines.Any())
+                throw new ArgumentException("Debe incluir al menos una línea en la orden");
+
+            if (orderDto.SalesPersonCode <= 0)
+                throw new ArgumentException("SalesPersonCode es requerido");
+
+            return await _repository.CreateSalesOrderAsync(orderDto);
         }
     }
 }

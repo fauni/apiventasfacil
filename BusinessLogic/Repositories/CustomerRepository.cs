@@ -34,11 +34,12 @@ namespace BusinessLogic.Repositories
                     parameters.PasswordDatabase);
 
                 var query = @"
-                    SELECT TOP 100 CardCode, CardName, CardFName, CardType, GroupCode, 
-                           Phone1, LicTradNum, Currency, SlpCode, ListNum
-                    FROM OCRD 
-                    WHERE CardType = 'C'
-                    ORDER BY CardName";
+                    SELECT TOP 100 T0.CardCode, T0.CardName, T0.CardFName, T0.CardType, T0.GroupCode, T0.Phone1, T0.LicTradNum, 
+                    T0.Currency, T0.SlpCode, T0.ListNum, T0.GroupNum, T1.PymntGroup
+                    FROM OCRD T0
+                    LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
+                    WHERE T0.CardType = 'C'
+                    ORDER BY T0.CardName";
 
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();
@@ -64,10 +65,11 @@ namespace BusinessLogic.Repositories
                     parameters.PasswordDatabase);
 
                 var query = @"
-                    SELECT CardCode, CardName, CardFName, CardType, GroupCode, 
-                           Phone1, LicTradNum, Currency, SlpCode, ListNum
-                    FROM OCRD 
-                    WHERE CardType = 'C' AND CardCode = @cardCode";
+                    SELECT T0.CardCode, T0.CardName, T0.CardFName, T0.CardType, T0.GroupCode, T0.Phone1, T0.LicTradNum, 
+                    T0.Currency, T0.SlpCode, T0.ListNum, T0.GroupNum, T1.PymntGroup
+                    FROM OCRD T0
+                    LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
+                    WHERE T0.CardType = 'C' AND T0.CardCode = @cardCode";
 
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();
@@ -93,23 +95,24 @@ namespace BusinessLogic.Repositories
                 var parameters = await _parameterService.GetParametersByGroupAsync("ireilab");
                 var connectionString = _connectionStringService.BuildSqlServerConnectionString(parameters.ServerDatabase, parameters.Database, parameters.UserDatabase, parameters.PasswordDatabase);
 
-                var whereClause = new StringBuilder("WHERE CardType = 'C'");
+                var whereClause = new StringBuilder("WHERE T0.CardType = 'C'");
                 var sqlParameters = new DynamicParameters();
 
                 // Agregamos filtros de busqueda si se proporciona
                 if (!string.IsNullOrEmpty(request.SearchTerm))
                 {
-                    whereClause.Append(" AND (CardCode LIKE @searchTerm OR CardName LIKE @searchTerm OR CardFName LIKE @searchTerm)");
+                    whereClause.Append(" AND (T0.CardCode LIKE @searchTerm OR T0.CardName LIKE @searchTerm OR T0.CardFName LIKE @searchTerm)");
                     sqlParameters.Add("@searchTerm", $"%{request.SearchTerm}%");
                 }
 
                 // Query principal para obtener los clientes
                 var mainQuery = $@"
-                    SELECT CardCode, CardName, CardFName, CardType, GroupCode, 
-                    Phone1, LicTradNum, Currency, SlpCode, ListNum
-                    FROM OCRD 
+                    SELECT TOP 100 T0.CardCode, T0.CardName, T0.CardFName, T0.CardType, T0.GroupCode, T0.Phone1, T0.LicTradNum, 
+                    T0.Currency, T0.SlpCode, T0.ListNum, T0.GroupNum, T1.PymntGroup
+                    FROM OCRD T0
+                    LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum 
                     {whereClause}
-                    ORDER BY CardName
+                    ORDER BY T0.CardName
                     OFFSET @offset ROWS
                     FETCH NEXT @pageSize ROWS ONLY";
 

@@ -18,6 +18,8 @@ namespace Core.DTOs.Customer
         public string Currency { get; set; }
         public int SlpCode { get; set; }
         public int ListNum { get; set; }
+        public int GroupNum { get; set; }
+        public string PymntGroup { get; set; }
     }
 
     public class CustomerSearchRequest
