@@ -86,6 +86,9 @@ builder.Services.AddScoped<ITermsConditionsService, TermsConditionsService>();
 builder.Services.AddScoped<IPaymentGroupRepository, PaymentGroupRepository>();
 builder.Services.AddScoped<IPaymentGroupService, PaymentGroupService>();
 
+builder.Services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+builder.Services.AddScoped<IWarehouseService, WarehouseService>();
+
 builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 // Para la cadena de conexión a la base de datos
 builder.Services.AddScoped<IConnectionStringService, ConnectionStringService>();
