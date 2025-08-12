@@ -7,13 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Core.Interfaces.Services
+namespace Core.Interfaces.Repositories
 {
-    public interface IUserSeriesService
+    public interface IUserSeriesRepository
     {
         Task<UserSerie> AssignSeriesAsync(UserSeriesDto dto);
-        Task<IEnumerable<UserSerie>> GetSeriesByUserAsync(int userId);
         Task<IEnumerable<UserSeriesDto>> GetSeriesByUserWithDetailsAsync(int userId);
-        Task<IEnumerable<SapSeriesDto>> GetAvailableSapSeriesAsync(int objectCode = 17);
+        Task<IEnumerable<SapSeriesDto>> GetAvailableSapSeriesAsync(int objectCode = 17); // 17 = Sales Orders
     }
 }

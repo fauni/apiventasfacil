@@ -56,6 +56,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddScoped<IParameterService, ParameterService>();
 builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<IUserSeriesRepository, UserSeriesRepository>();
 builder.Services.AddScoped<IUserSeriesService, UserSeriesService>();
 
 builder.Services.AddScoped<ISapSessionService, SapSessionService>();
