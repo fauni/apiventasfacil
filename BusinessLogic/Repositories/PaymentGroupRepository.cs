@@ -69,9 +69,68 @@ namespace BusinessLogic.Repositories
                 throw new Exception($"Payment group with GroupNum {groupNum} not found.", ex);
             }
         }
-        public Task<PaymentGroupResponse> SearchPaymentGroupAsync(PaymentGroupSearchRequest request)
+        public async Task<PaymentGroupResponse> SearchPaymentGroupAsync(PaymentGroupSearchRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var connectionString = await GetConnectionStringAsync();
+
+                var whereClause = new StringBuilder("WHERE 1=1");
+                var sqlParameters = new DynamicParameters();
+
+                // Filtros de búsqueda
+                if (!string.IsNullOrEmpty(request.SearchTerm))
+                {
+                    whereClause.Append("AND (ItemCode LIKE @searchTerm)");
+                    sqlParameters.Add("@searchTerm", $"%{request.SearchTerm}%");
+                }
+
+                // Query principal
+                var mainQuery = $@"
+                    SELECT T0.GroupNum, T0.PymntGroup, T0.ListNum
+                    FROM OCTG T0
+                    {whereClause}
+                    ORDER BY T0.PymntGroup
+                    OFFSET @offset ROWS
+                    FETCH NEXT @pageSize ROWS ONLY";
+                
+                // Query para contar total de registros
+                var contryQuery = $@"
+                    SELECT COUNT(*)
+                    FROM OCTG
+                    {whereClause}";
+
+                // Calcular offset para paginación
+                var offset = (request.PageNumber - 1) * request.PageSize;
+                sqlParameters.Add("@offset", offset);
+                sqlParameters.Add("@pageSize", request.PageSize);
+
+                using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+
+                // Ejecutar ambas queries
+                var totalCountTask = connection.QuerySingleAsync<int>(contryQuery, sqlParameters);
+                var paymentGroupsTask = connection.QueryAsync<PaymentGroupDto>(mainQuery, sqlParameters);
+
+                await Task.WhenAll(totalCountTask, paymentGroupsTask);
+                var totalCount = totalCountTask.Result;
+                var paymentGroups = paymentGroupsTask.Result.ToList();
+
+                var totalPages = (int)Math.Ceiling((double)totalCount / request.PageSize);
+
+                return new PaymentGroupResponse
+                {
+                    PaymentGroups = paymentGroups,
+                    TotalCount = totalCount,
+                    PageNumber = request.PageNumber,
+                    PageSize = request.PageSize,
+                    TotalPages = totalPages
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error searching Payment groups:{ex.Message}.", ex);
+            }
         }
     }
 }

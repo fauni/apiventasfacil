@@ -27,9 +27,9 @@ namespace BusinessLogic.Services
             return await _paymentGroupRepository.GetPaymentGroupByGroupNumAsync(groupNum);
         }
 
-        public Task<PaymentGroupResponse> SearchPaymentGroupAsync(PaymentGroupSearchRequest request)
+        public async Task<PaymentGroupResponse> SearchPaymentGroupAsync(PaymentGroupSearchRequest request)
         {
-            throw new NotImplementedException();
+            return await _paymentGroupRepository.SearchPaymentGroupAsync(request);
         }
     }
 }

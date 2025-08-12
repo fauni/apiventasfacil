@@ -107,7 +107,7 @@ namespace BusinessLogic.Repositories
 
                 // Query principal para obtener los clientes
                 var mainQuery = $@"
-                    SELECT TOP 100 T0.CardCode, T0.CardName, T0.CardFName, T0.CardType, T0.GroupCode, T0.Phone1, T0.LicTradNum, 
+                    SELECT T0.CardCode, T0.CardName, T0.CardFName, T0.CardType, T0.GroupCode, T0.Phone1, T0.LicTradNum, 
                     T0.Currency, T0.SlpCode, T0.ListNum, T0.GroupNum, T1.PymntGroup
                     FROM OCRD T0
                     LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum 
@@ -119,7 +119,8 @@ namespace BusinessLogic.Repositories
                 // Query para contar total de registros de clientes
                 var countQuery = $@"
                 SELECT COUNT(*)
-                FROM OCRD
+                FROM OCRD T0
+                LEFT JOIN OCTG T1 ON T0.GroupNum = T1.GroupNum
                 {whereClause}";
 
                 // Calcular offset para paginación
