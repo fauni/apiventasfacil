@@ -80,6 +80,9 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<IUnitOfMeasureRepository, UnitOfMeasureRepository>();
 builder.Services.AddScoped<IUnitOfMeasureService, UnitOfMeasureService>();
 
+builder.Services.AddScoped<ITfeUnitOfMeasureRepository, TfeUnitOfMeasureRepository>();
+builder.Services.AddScoped<ITfeUnitOfMeasureService, TfeUnitOfMeasureService>();
+
 builder.Services.AddScoped<ITermsConditionsRepository, TermsConditionsRepository>();
 builder.Services.AddScoped<ITermsConditionsService, TermsConditionsService>();
 
