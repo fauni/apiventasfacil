@@ -32,5 +32,10 @@ namespace BusinessLogic.Services
         {
             return await _itemRepository.GetItemsAutocompleteAsync(term);
         }
+
+        public async Task<ItemWarehouseStockResponse> GetItemStockByWarehousesAsync(string itemCode)
+        {
+            return await _itemRepository.GetItemStockByWarehousesAsync(itemCode);
+        }
     }
 }

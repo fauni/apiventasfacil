@@ -93,5 +93,35 @@ namespace WebApi.Controllers
                 return BadRequest(ApiResponse<string>.Fail($"Error en autocompletado: {ex.Message}"));
             }
         }
+
+        /// <summary>
+        /// Obtener stock de un item por todos los almacenes
+        /// </summary>
+        /// <param name="itemCode">Código del item</param>
+        /// <returns>Stock del item en todos los almacenes</returns>
+        [HttpGet("{itemCode}/stock-by-warehouses")]
+        public async Task<IActionResult> GetItemStockByWarehouses(string itemCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(itemCode))
+                {
+                    return BadRequest(ApiResponse<string>.Fail("El código del item es requerido"));
+                }
+
+                var result = await _itemService.GetItemStockByWarehousesAsync(itemCode);
+                return Ok(ApiResponse<ItemWarehouseStockResponse>.Ok(result, "Stock por almacenes obtenido correctamente"));
+            }
+            catch (Exception ex)
+            {
+
+                if (ex.Message.Contains("no encontrado"))
+                {
+                    return NotFound(ApiResponse<string>.Fail(ex.Message));
+                }
+
+                return BadRequest(ApiResponse<string>.Fail($"Error al obtener stock por almacenes: {ex.Message}"));
+            }
+        }
     }
 }

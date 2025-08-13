@@ -3,6 +3,8 @@ using Core.Interfaces.Repositories;
 using Core.Interfaces.Services;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -167,6 +169,74 @@ namespace BusinessLogic.Repositories
             catch (Exception ex)
             {
                 throw new Exception($"Error en autocompletado de items: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<ItemWarehouseStockResponse> GetItemStockByWarehousesAsync(string itemCode)
+        {
+            try
+            {
+                var parameters = await _parameterService.GetParametersByGroupAsync("ireilab");
+                var connectionString = _connectionStringService.BuildSqlServerConnectionString(
+                    parameters.ServerDatabase,
+                    parameters.Database,
+                    parameters.UserDatabase,
+                    parameters.PasswordDatabase);
+
+                // Query para obtener información del item
+                var itemQuery = @"
+                SELECT ItemCode, ItemName 
+                FROM OITM 
+                WHERE ItemCode = @itemCode";
+
+                // Query para obtener stock por almacenes
+                var stockQuery = @"
+                SELECT 
+                    w.WhsCode,
+                    w.WhsName,
+                    ISNULL(s.OnHand, 0) AS OnHand,
+                    ISNULL(s.IsCommited, 0) AS IsCommited,
+                    ISNULL(s.OnOrder, 0) AS OnOrder,
+                    (ISNULL(s.OnHand, 0) - ISNULL(s.IsCommited, 0) + ISNULL(s.OnOrder, 0)) AS Available
+                FROM OWHS w
+                LEFT JOIN OITW s ON w.WhsCode = s.WhsCode AND s.ItemCode = @itemCode
+                WHERE w.Locked = 'N'
+                ORDER BY w.WhsCode";
+
+                using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+
+                // Verificar que el item existe
+                var item = await connection.QueryFirstOrDefaultAsync(itemQuery, new { itemCode });
+                if (item == null)
+                {
+                    throw new Exception($"Item con código '{itemCode}' no encontrado");
+                }
+
+                // Obtener stock por almacenes
+                var warehouseStocks = await connection.QueryAsync<ItemWarehouseStockDto>(stockQuery, new { itemCode });
+                var warehouseStocksList = warehouseStocks.ToList();
+
+                // Calcular totales
+                var totalOnHand = warehouseStocksList.Sum(x => x.OnHand);
+                var totalIsCommited = warehouseStocksList.Sum(x => x.IsCommited);
+                var totalOnOrder = warehouseStocksList.Sum(x => x.OnOrder);
+                var totalAvailable = warehouseStocksList.Sum(x => x.Available);
+
+                return new ItemWarehouseStockResponse
+                {
+                    ItemCode = item.ItemCode,
+                    ItemName = item.ItemName,
+                    WarehouseStocks = warehouseStocksList,
+                    TotalOnHand = totalOnHand,
+                    TotalIsCommited = totalIsCommited,
+                    TotalOnOrder = totalOnOrder,
+                    TotalAvailable = totalAvailable
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error al obtener el stock por almacenes: {ex.Message}", ex);
             }
         }
     }

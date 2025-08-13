@@ -12,5 +12,6 @@ namespace Core.Interfaces.Repositories
         Task<ItemSearchResponse> SearchItemsAsync(ItemSearchRequest request);
         Task<ItemDto> GetItemByCodeAsync(string itemCode);
         Task<List<ItemAutocompleteDto>> GetItemsAutocompleteAsync(string term);
+        Task<ItemWarehouseStockResponse> GetItemStockByWarehousesAsync(string itemCode);
     }
 }
