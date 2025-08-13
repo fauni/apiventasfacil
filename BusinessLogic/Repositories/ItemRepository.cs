@@ -33,29 +33,32 @@ namespace BusinessLogic.Repositories
                     parameters.UserDatabase,
                     parameters.PasswordDatabase);
 
-                var whereClause = new StringBuilder("WHERE 1=1 AND frozenFor = 'N'");
+                var whereClause = new StringBuilder("WHERE T0.frozenFor = 'N'");
                 var sqlParameters = new DynamicParameters();
 
                 // Filtros de búsqueda
                 if (!string.IsNullOrEmpty(request.SearchTerm))
                 {
-                    whereClause.Append(" AND (ItemCode LIKE @searchTerm OR ItemName LIKE @searchTerm)");
+                    whereClause.Append(" AND (T0.ItemCode LIKE @searchTerm OR T0.ItemName LIKE @searchTerm)");
                     sqlParameters.Add("@searchTerm", $"%{request.SearchTerm}%");
                 }
 
-                // Query principal basada en tu consulta
+                // Query principal con Stock calculado
                 var mainQuery = $@"
-                    SELECT ItemCode, ItemName, UgpEntry
-                    FROM OITM 
+                    SELECT T0.ItemCode, T0.ItemName, T0.UgpEntry, ISNULL(SUM(T1.OnHand), 0) AS Stock
+                    FROM OITM T0
+                    LEFT JOIN OITW T1 ON T0.ItemCode = T1.ItemCode 
                     {whereClause}
-                    ORDER BY ItemName
+                    GROUP BY T0.ItemCode, T0.ItemName, T0.UgpEntry
+                    ORDER BY T0.ItemName
                     OFFSET @offset ROWS
                     FETCH NEXT @pageSize ROWS ONLY";
 
                 // Query para contar total de registros
                 var countQuery = $@"
-                    SELECT COUNT(*)
-                    FROM OITM
+                    SELECT COUNT(DISTINCT T0.ItemCode)
+                    FROM OITM T0
+                    LEFT JOIN OITW T1 ON T0.ItemCode = T1.ItemCode 
                     {whereClause}";
 
                 // Calcular offset para paginación
@@ -104,9 +107,11 @@ namespace BusinessLogic.Repositories
                     parameters.PasswordDatabase);
 
                 var query = @"
-                    SELECT ItemCode, ItemName, UgpEntry
-                    FROM OITM 
-                    WHERE ItemCode = @itemCode";
+                    SELECT T0.ItemCode, T0.ItemName, T0.UgpEntry, ISNULL(SUM(T1.OnHand), 0) AS Stock
+                    FROM OITM T0
+                    LEFT JOIN OITW T1 ON T0.ItemCode = T1.ItemCode 
+                    WHERE T0.ItemCode = @itemCode
+                    GROUP BY T0.ItemCode, T0.ItemName, T0.UgpEntry";
 
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();
@@ -139,14 +144,18 @@ namespace BusinessLogic.Repositories
 
                 var query = @"
                     SELECT TOP 10
-                        ItemCode,
-                        ItemName,
-                        ItemCode + ' - ' + ItemName as DisplayText,
-                        UgpEntry
-                    FROM OITM 
+                        T0.ItemCode,
+                        T0.ItemName,
+                        T0.ItemCode + ' - ' + T0.ItemName as DisplayText,
+                        T0.UgpEntry,
+                        ISNULL(SUM(T1.OnHand), 0) AS Stock
+                    FROM OITM T0
+                    LEFT JOIN OITW T1 ON T0.ItemCode = T1.ItemCode 
                     WHERE 
-                        (ItemCode LIKE @term OR ItemName LIKE @term)
-                    ORDER BY ItemName";
+                        (T0.ItemCode LIKE @term OR T0.ItemName LIKE @term)
+                        AND T0.frozenFor = 'N'
+                    GROUP BY T0.ItemCode, T0.ItemName, T0.UgpEntry
+                    ORDER BY T0.ItemName";
 
                 using var connection = new SqlConnection(connectionString);
                 await connection.OpenAsync();

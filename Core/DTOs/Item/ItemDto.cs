@@ -11,6 +11,7 @@ namespace Core.DTOs.Item
         public string ItemCode { get; set; }
         public string ItemName { get; set; }
         public int UgpEntry { get; set; }
+        public decimal Stock { get; set; }
     }
 
     public class ItemSearchRequest
@@ -35,5 +36,6 @@ namespace Core.DTOs.Item
         public string ItemName { get; set; }
         public string DisplayText { get; set; }
         public int UgpEntry { get; set; }
+        public decimal Stock { get; set; }
     }
 }
